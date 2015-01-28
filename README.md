@@ -2,8 +2,7 @@
 
 Displays the status of a given website.
 
-* Blue == Doesn't mean anything
-* Green == can be reached
-* Red == cannot be reached
+* Tick == website is reachable
+* Cross == website not reachable
 
-Hover over the coloured square to see which website is being referred to.
+Hover over the status item to see which web address is being referred to.
