@@ -77,7 +77,6 @@
 
 - (void)doWebsiteCheck {
     if(_webAddress) {
-        NSLog(_webAddress, nil);
         SCNetworkReachabilityRef target;
         SCNetworkConnectionFlags flags = 0;
         Boolean ok;
