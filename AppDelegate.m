@@ -39,8 +39,8 @@
     _statusItem = [[NSStatusBar systemStatusBar] statusItemWithLength:NSVariableStatusItemLength];
     _statusItem.title = @"";
     _statusItem.toolTip = @"Website health displayer";
-    _statusItem.image = [NSImage imageNamed:@"blue"];
-    _statusItem.alternateImage = [NSImage imageNamed:@"blue"];
+    _statusItem.image = [NSImage imageNamed:@"cross"];
+    _statusItem.alternateImage = [NSImage imageNamed:@"cross"];
     _statusItem.highlightMode = YES;
     
     // Menu stuff
@@ -96,11 +96,11 @@
         
         ok = (flags & kSCNetworkReachabilityFlagsReachable);
         if(ok) {
-            _statusItem.image = [NSImage imageNamed:@"green"];
-            _statusItem.alternateImage = [NSImage imageNamed:@"green"];
+            _statusItem.image = [NSImage imageNamed:@"tick"];
+            _statusItem.alternateImage = [NSImage imageNamed:@"tick"];
         } else {
-            _statusItem.image = [NSImage imageNamed:@"red"];
-            _statusItem.alternateImage = [NSImage imageNamed:@"red"];
+            _statusItem.image = [NSImage imageNamed:@"cross"];
+            _statusItem.alternateImage = [NSImage imageNamed:@"cross"];
         }
     }
 }
