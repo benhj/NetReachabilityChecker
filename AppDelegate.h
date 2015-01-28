@@ -17,6 +17,7 @@
 - (NSString *)input: (NSString *)prompt
        defaultValue: (NSString *)defaultValue;
 
+-(void)frontAbout:(id)sender;
 - (void)processDialog:(id)sender;
 - (void)processExit:(id)sender;
 - (void)processRefresh:(id)sender;

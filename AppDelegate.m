@@ -60,7 +60,7 @@
     
     // Add a simple 'about' item
     [menu addItemWithTitle:@"About"
-                    action:@selector(orderFrontStandardAboutPanel:)
+                    action:@selector(frontAbout:)
              keyEquivalent:@""];
     [menu addItem:[NSMenuItem separatorItem]]; // A thin grey line
     
@@ -73,6 +73,13 @@
 
 - (void)applicationWillTerminate:(NSNotification *)aNotification {
     // Insert code here to tear down your application
+}
+
+-(void)frontAbout:(id)sender{
+    
+    [NSApp activateIgnoringOtherApps:YES];
+    
+    [NSApp orderFrontStandardAboutPanel:self];
 }
 
 - (void)doWebsiteCheck {
