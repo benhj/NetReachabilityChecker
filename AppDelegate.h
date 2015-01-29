@@ -7,10 +7,13 @@
 //
 
 #import <Cocoa/Cocoa.h>
+#include <vector>
+#include <map>
 
-@interface AppDelegate : NSObject <NSApplicationDelegate> {
+@interface AppDelegate : NSObject <NSApplicationDelegate, NSUserNotificationCenterDelegate> {
     NSStatusItem* _statusItem;
-    NSString* _webAddress;
+    std::map<std::string, NSMenuItem*> _webItems;
+    NSMenu* _menu;
 }
 
 
@@ -21,7 +24,16 @@
 - (void)processDialog:(id)sender;
 - (void)processExit:(id)sender;
 - (void)processRefresh:(id)sender;
-- (void)doWebsiteCheck;
+- (void)doWebsiteCheck:(NSString*)address;
+
+// for checking site status every five minutes
+- (void)pollingRefresh:(id)sender;
+
+-(void)showGenericNotification:(NSString*) title
+                   withMessage:(NSString*) message;
+
+-(void)showGoneDownNotification:(NSString*) site;
+-(void)showGoodNotification:(NSString*) site;
 
 @end
 
