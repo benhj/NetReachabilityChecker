@@ -7,6 +7,7 @@
 //
 
 #import "AppDelegate.h"
+#import "CallbackInfo.h"
 #import <SystemConfiguration/SystemConfiguration.h>
 #include <string>
 
@@ -52,9 +53,6 @@
                      action:@selector(processDialog:)
               keyEquivalent:@""];
     
-    [_menu addItemWithTitle:@"Refresh"
-                     action:@selector(processRefresh:)
-              keyEquivalent:@""];
     [_menu addItem:[NSMenuItem separatorItem]]; // A thin grey line
     
     // Add a simple 'about' item
@@ -67,10 +65,7 @@
                      action:@selector(processExit:)
               keyEquivalent:@""];
     _statusItem.menu = _menu;
-    
-    // Every five minutes, check website reachability
-    [self performSelectorInBackground:@selector(pollingRefresh:) withObject:nil];
-    
+    [_menu addItem:[NSMenuItem separatorItem]]; // A thin grey line
 }
 
 - (void)applicationWillTerminate:(NSNotification *)aNotification {
@@ -78,59 +73,58 @@
 }
 
 -(void)frontAbout:(id)sender{
-    
     [NSApp activateIgnoringOtherApps:YES];
-    
     [NSApp orderFrontStandardAboutPanel:self];
 }
 
-- (void)doWebsiteCheck:(NSString*)address {
+- (void)setupReachability:(NSString*)address {
     if(address) {
-        std::string cstring = [address UTF8String];
+
         SCNetworkReachabilityRef target;
         SCNetworkConnectionFlags flags = 0;
-        Boolean ok;
-        target = SCNetworkReachabilityCreateWithName(CFAllocatorGetDefault(), cstring.c_str());
+        target = SCNetworkReachabilityCreateWithName(CFAllocatorGetDefault(), [address UTF8String]);
         
         if(target) {
-            SCNetworkReachabilityGetFlags(target, &flags);
-            CFRelease(target);
-        }
-        
-        ok = (flags & kSCNetworkReachabilityFlagsReachable);
-        NSMenuItem *item;
-        auto it(_webItems.find(cstring));
-        
-        Boolean oldEntry = NO;
-        
-        if(it != std::end(_webItems)) {
-            oldEntry = YES;
-            item = it->second;
-        } else {
+            
+            NSMenuItem *item;
             item = [[NSMenuItem alloc] init];
             item.title = address;
-            if(_webItems.empty()) {
-                [_menu addItem:[NSMenuItem separatorItem]]; // A thin grey line
-            }
-            _webItems.insert(std::make_pair(cstring, item));
             [_menu addItem:item];
-        }
-        
-        if(ok) {
-            item.image = [ NSImage imageNamed:@"green"];
-            if(oldEntry == NO) {
-                [self showGoodNotification:address];
-            }
-        } else {
-            item.image = [ NSImage imageNamed:@"red"];
+
+            CallbackInfo* cbinfo = [[CallbackInfo alloc] init];
+            [cbinfo setAddress:address];
+            [cbinfo setApp:self];
+            [cbinfo setAssociatedItem:item];
+            SCNetworkReachabilityGetFlags(target, &flags);
+            SCNetworkReachabilityContext context = {0, NULL, NULL, NULL, NULL};
+            context.info = (void*)CFBridgingRetain(cbinfo);
             
-            // pop up a notification saying website has gone down
-            if(oldEntry == YES) {
-                [self showGoneDownNotification:address];
+            // callback triggered whenever reachability has changed
+            if (SCNetworkReachabilitySetCallback(target, callback, &context)) {
+                if (SCNetworkReachabilityScheduleWithRunLoop(target, CFRunLoopGetCurrent(), kCFRunLoopDefaultMode) ) {
+                    NSLog(@"create and config reachability sucess") ;
+                }
             }
-            
         }
-        
+    }
+}
+
+// called every time reachability changes
+void callback(SCNetworkReachabilityRef target,
+              SCNetworkConnectionFlags flags,
+              void *info)
+{
+    auto cbinfo = (CallbackInfo*)CFBridgingRelease(info);
+    Boolean ok = (flags & kSCNetworkReachabilityFlagsReachable);
+    auto address = [cbinfo getAddress];
+    auto item = [cbinfo getMenuItem];
+    auto app = [cbinfo getApp];
+    if(ok) {
+        item.image = [ NSImage imageNamed:@"green"];
+        [app showGoodNotification:address];
+    } else {
+        item.image = [ NSImage imageNamed:@"red"];
+        [app showGoneDownNotification:address];
     }
 }
 
@@ -146,7 +140,6 @@
     notification.informativeText     = message;
     notification.soundName           = NSUserNotificationDefaultSoundName;
     notification.actionButtonTitle   = @"None";
-    NSLog(@"notification: %@", notification);
     NSUserNotificationCenter *center = [NSUserNotificationCenter defaultUserNotificationCenter];
     center.delegate                  = self;
     [center scheduleNotification:notification];
@@ -164,7 +157,6 @@
 }
 
 -(void)showGoodNotification:(NSString*) site {
-    
     NSMutableString* message = [[NSMutableString alloc] init];
     [message appendString:@"Website "];
     [message appendString:site];
@@ -174,27 +166,10 @@
     
 }
 
-- (void)pollingRefresh:(id)sender {
-    while(1) {
-        for(auto const & it : _webItems) {
-            [self doWebsiteCheck:[NSString stringWithCString:it.first.c_str()
-                                                    encoding:[NSString defaultCStringEncoding]]];
-        }
-        sleep(300);
-    }
-}
-
 - (void)processDialog:(id)sender {
     NSString* webAddress = [self input:@"Web address to check status of:"
                           defaultValue:@"www.google.com"];
-    [self doWebsiteCheck:webAddress];
-}
-
-- (void)processRefresh:(id)sender {
-    for(auto const & it : _webItems) {
-        [self doWebsiteCheck:[NSString stringWithCString:it.first.c_str()
-                                                encoding:[NSString defaultCStringEncoding]]];
-    }
+    [self setupReachability:webAddress];
 }
 
 - (void)processExit:(id)sender {
