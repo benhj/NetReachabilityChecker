@@ -105,6 +105,8 @@
                     NSLog(@"create and config reachability sucess") ;
                 }
             }
+        } else if (target != NULL) {
+            CFRelease(target);
         }
     }
 }
@@ -115,7 +117,14 @@ void callback(SCNetworkReachabilityRef target,
               void *info)
 {
     auto cbinfo = (CallbackInfo*)CFBridgingRelease(info);
-    Boolean ok = (flags & kSCNetworkReachabilityFlagsReachable);
+    
+    // check that a connection isn't required. If a connection isn't required,
+    // we're probably connected;
+    Boolean ok = !(flags & kSCNetworkReachabilityFlagsConnectionRequired);
+    if(ok) {
+        // now check that given the connection, the address can be reached
+        ok = flags & kSCNetworkReachabilityFlagsReachable;
+    }
     auto address = [cbinfo getAddress];
     auto item = [cbinfo getMenuItem];
     auto app = [cbinfo getApp];
