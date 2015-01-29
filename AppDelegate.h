@@ -19,7 +19,6 @@
 - (void)frontAbout:(id)sender;
 - (void)processDialog:(id)sender;
 - (void)processExit:(id)sender;
-- (void)processRefresh:(id)sender;
 - (void)setupReachability:(NSString*)address;
 
 -(void)showGenericNotification:(NSString*) title
