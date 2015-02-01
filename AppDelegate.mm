@@ -10,8 +10,13 @@
 #import "CallbackInfo.h"
 #import <SystemConfiguration/SystemConfiguration.h>
 #include <string>
+#include <map>
 
 @implementation AppDelegate
+
+// to make reachability callback easier, store all
+// connection infos in a map
+std::map<std::string, CallbackInfo*> infos;
 
 - (NSString *)input: (NSString *)prompt
        defaultValue: (NSString *)defaultValue {
@@ -36,6 +41,7 @@
 }
 
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification {
+    
     // Set up the icon that is displayed in the status bar
     _statusItem = [[NSStatusBar systemStatusBar] statusItemWithLength:NSVariableStatusItemLength];
     _statusItem.title = @"";
@@ -97,7 +103,10 @@
             [cbinfo setAssociatedItem:item];
             SCNetworkReachabilityGetFlags(target, &flags);
             SCNetworkReachabilityContext context = {0, NULL, NULL, NULL, NULL};
-            context.info = (void*)CFBridgingRetain(cbinfo);
+            
+            infos.insert(std::make_pair([address UTF8String], cbinfo));
+            
+            context.info = (void*)CFBridgingRetain(address);
             
             // callback triggered whenever reachability has changed
             if (SCNetworkReachabilitySetCallback(target, callback, &context)) {
@@ -116,7 +125,8 @@ void callback(SCNetworkReachabilityRef target,
               SCNetworkConnectionFlags flags,
               void *info)
 {
-    auto cbinfo = (CallbackInfo*)CFBridgingRelease(info);
+    auto address = (NSString*)CFBridgingRelease(info);
+    auto cbinfo = (infos.find([address UTF8String]))->second;
     
     // check that a connection isn't required. If a connection isn't required,
     // we're probably connected;
@@ -125,7 +135,6 @@ void callback(SCNetworkReachabilityRef target,
         // now check that given the connection, the address can be reached
         ok = flags & kSCNetworkReachabilityFlagsReachable;
     }
-    auto address = [cbinfo getAddress];
     auto item = [cbinfo getMenuItem];
     auto app = [cbinfo getApp];
     if(ok) {
