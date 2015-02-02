@@ -27,6 +27,9 @@
 -(void)showGoneDownNotification:(NSString*) site;
 -(void)showGoodNotification:(NSString*) site;
 
+// for deleting a previouslay added item
+-(void)removeItemSelector:(id)sender;
+
 
 @end
 

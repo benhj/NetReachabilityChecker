@@ -14,9 +14,11 @@
 
 @implementation AppDelegate
 
-// to make reachability callback easier, store all
-// connection infos in a map
+// for reachability checking, store necessary objects in a map
+// of CambackInfo objects.
 std::map<std::string, CallbackInfo*> infos;
+
+NSMenuItem *finalSeperatorLine = [NSMenuItem separatorItem];
 
 - (NSString *)input: (NSString *)prompt
        defaultValue: (NSString *)defaultValue {
@@ -43,18 +45,17 @@ std::map<std::string, CallbackInfo*> infos;
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification {
     
     // Set up the icon that is displayed in the status bar
-    _statusItem = [[NSStatusBar systemStatusBar] statusItemWithLength:NSVariableStatusItemLength];
-    _statusItem.title = @"";
-    _statusItem.toolTip = @"Website health displayer";
-    _statusItem.image = [NSImage imageNamed:@"greencross"];
-    _statusItem.alternateImage = [NSImage imageNamed:@"greencross"];
-    _statusItem.highlightMode = YES;
+    _statusItem                = [[NSStatusBar systemStatusBar] statusItemWithLength:NSVariableStatusItemLength];
+    _statusItem.title          = @"";
+    _statusItem.toolTip        = @"Website health displayer";
+    _statusItem.image          = [NSImage imageNamed:@"bwCross"];
+    _statusItem.alternateImage = [NSImage imageNamed:@"bwCross"];
+    _statusItem.highlightMode  = YES;
     
     // Menu stuff
     _menu = [[NSMenu alloc] init];
     
-    // For popping up a dialog of where user want email notifications
-    // to be delivered
+    // For popping up a dialog of what website user wants checked
     [_menu addItemWithTitle:@"Add website..."
                      action:@selector(processDialog:)
               keyEquivalent:@""];
@@ -71,7 +72,6 @@ std::map<std::string, CallbackInfo*> infos;
                      action:@selector(processExit:)
               keyEquivalent:@""];
     _statusItem.menu = _menu;
-    [_menu addItem:[NSMenuItem separatorItem]]; // A thin grey line
 }
 
 - (void)applicationWillTerminate:(NSNotification *)aNotification {
@@ -83,32 +83,72 @@ std::map<std::string, CallbackInfo*> infos;
     [NSApp orderFrontStandardAboutPanel:self];
 }
 
+-(void)removeItemSelector:(id)sender{
+    
+    // search for the address, remove associated website from menu and from map
+    NSString* address = [sender representedObject];
+    auto it(infos.find([address UTF8String]));
+    if(it != std::end(infos)) {
+        auto info = it->second;
+        auto item = [info getMenuItem];
+        
+        // remove from menu
+        [_menu removeItem:item];
+        
+        // remove from map
+        infos.erase(it);
+        
+        // remove the final seperator line if map is now empty
+        if(infos.empty()) {
+            [_menu removeItem:finalSeperatorLine];
+        }
+    }
+}
+
 - (void)setupReachability:(NSString*)address {
     if(address) {
-
+        
         SCNetworkReachabilityRef target;
         SCNetworkConnectionFlags flags = 0;
         target = SCNetworkReachabilityCreateWithName(CFAllocatorGetDefault(), [address UTF8String]);
         
         if(target) {
             
+            // aesthetics
+            if(infos.empty()) {
+                [_menu addItem:finalSeperatorLine]; // A thin grey line
+            }
+            
+            // Add a menu item representing the 'website being checked'
             NSMenuItem *item;
-            item = [[NSMenuItem alloc] init];
+            item       = [[NSMenuItem alloc] init];
             item.title = address;
             [_menu addItem:item];
-
+            
+            // Add a sub menu with option to remove the website
+            NSMenu *subMenu = [[NSMenu alloc] init];
+            NSMenuItem *subItem = [[NSMenuItem alloc] initWithTitle:@"Remove"
+                                                             action:@selector(removeItemSelector:)
+                                                      keyEquivalent:@""];
+            
+            // Add the url address to the sub menu item so that it can be retrieved in selector
+            [subItem setRepresentedObject:address];
+            [subMenu addItem:subItem];
+            [item setSubmenu:subMenu];
+            
+            // Store information related to address in a covenient object
             CallbackInfo* cbinfo = [[CallbackInfo alloc] init];
             [cbinfo setAddress:address];
             [cbinfo setApp:self];
             [cbinfo setAssociatedItem:item];
-            SCNetworkReachabilityGetFlags(target, &flags);
-            SCNetworkReachabilityContext context = {0, NULL, NULL, NULL, NULL};
-            
             infos.insert(std::make_pair([address UTF8String], cbinfo));
             
+            // Set up network reachability on address
+            SCNetworkReachabilityGetFlags(target, &flags);
+            SCNetworkReachabilityContext context = {0, NULL, NULL, NULL, NULL};
             context.info = (void*)CFBridgingRetain(address);
             
-            // callback triggered whenever reachability has changed
+            // callback triggered whenever reachability changes
             if (SCNetworkReachabilitySetCallback(target, callback, &context)) {
                 if (SCNetworkReachabilityScheduleWithRunLoop(target, CFRunLoopGetCurrent(), kCFRunLoopDefaultMode) ) {
                     NSLog(@"create and config reachability sucess") ;
@@ -126,23 +166,26 @@ void callback(SCNetworkReachabilityRef target,
               void *info)
 {
     auto address = (NSString*)CFBridgingRelease(info);
-    auto cbinfo = (infos.find([address UTF8String]))->second;
-    
-    // check that a connection isn't required. If a connection isn't required,
-    // we're probably connected;
-    Boolean ok = !(flags & kSCNetworkReachabilityFlagsConnectionRequired);
-    if(ok) {
-        // now check that given the connection, the address can be reached
-        ok = flags & kSCNetworkReachabilityFlagsReachable;
-    }
-    auto item = [cbinfo getMenuItem];
-    auto app = [cbinfo getApp];
-    if(ok) {
-        item.image = [ NSImage imageNamed:@"green"];
-        [app showGoodNotification:address];
-    } else {
-        item.image = [ NSImage imageNamed:@"red"];
-        [app showGoneDownNotification:address];
+    auto it(infos.find([address UTF8String]));
+    if(it != std::end(infos)) {
+        auto cbinfo = (infos.find([address UTF8String]))->second;
+        
+        // check that a connection isn't required. If a connection isn't required,
+        // we're probably connected;
+        Boolean ok = !(flags & kSCNetworkReachabilityFlagsConnectionRequired);
+        if(ok) {
+            // now check that given the connection, the address can be reached
+            ok = flags & kSCNetworkReachabilityFlagsReachable;
+        }
+        auto item = [cbinfo getMenuItem];
+        auto app  = [cbinfo getApp];
+        if(ok) {
+            item.image = [ NSImage imageNamed:@"greenTick"];
+            [app showGoodNotification:address];
+        } else {
+            item.image = [ NSImage imageNamed:@"redCross"];
+            [app showGoneDownNotification:address];
+        }
     }
 }
 
@@ -171,7 +214,7 @@ void callback(SCNetworkReachabilityRef target,
     [message appendString:@" appears down."];
     [self showGenericNotification:@"Appears down"
                       withMessage:message];
-
+    
 }
 
 -(void)showGoodNotification:(NSString*) site {
