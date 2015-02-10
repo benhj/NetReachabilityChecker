@@ -1,7 +1,7 @@
-# OSXWebsiteHealthChecker
+# NetReachabilityChecker
 
 This is a very simple application designed to show you the status of a list of 
-websites. This might be useful if your daily workflow depends on certain
+ip address or web addresses. This might be useful if your daily workflow depends on certain
 websites being available. Multiple sites can be added, and their status' 
 are displayed in the drop down menu. The status' of all added sites are checked 
 using Apple's reachability api. When a site is found to be unreachable, 
