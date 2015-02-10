@@ -1,4 +1,8 @@
+
+
 # NetReachabilityChecker
+
+For MACOSX
 
 This is a very simple application designed to show you the status of a list of 
 ip address or web addresses. This might be useful if your daily workflow depends on certain
