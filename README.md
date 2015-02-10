@@ -9,8 +9,4 @@ a notification will pop up indicating this to be the case.
 
 ## Building this code
 
-Probably the esaiest thing to do is create a cocoa Xcode project named OSXWebSiteHealthChecker.
-Upon creation, this will contain a sub folder also of the same name. You should remove this sub-folder 
-in its entirety, replacing it with a clone of this repo. You will then need to add the
-SystemConfiguration.framework as this is used for the reachability checking.
-The project should then compile and link correctly.
+Should just be able to clone and open the accompanying xcode project
