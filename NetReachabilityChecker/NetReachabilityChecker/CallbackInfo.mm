@@ -1,6 +1,6 @@
 //
 //  CallbackInfo.m
-//  OSXWebsiteHealthChecker
+//  NetReachabilityChecker (Formerly OSXWebsiteHealthChecker)
 //
 //  Created by Ben Jones on 1/29/15.
 //  Copyright (c) 2015 Ben Jones. All rights reserved.

@@ -1,6 +1,6 @@
 //
 //  CallbackInfo.h
-//  OSXWebsiteHealthChecker
+//  NetReachabilityChecker (Formerly OSXWebsiteHealthChecker)
 //
 //  Used to store information pertaining to web-check callback in AppDelegate
 //
